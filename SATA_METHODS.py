@@ -48,9 +48,6 @@ class SataMethod():
         return _neu_frame
 
     def Describe(self, descb_col=''):
-        """
-
-        """
         classes = np.unique(np.array(self.dataframe[self.class_col]))
         #_sata_frame = self._DropEmptyCol(drop_col=[descb_col])
         _sata_frame = self._Neumeric(neu_col=descb_col)
@@ -104,17 +101,8 @@ class SataMethod():
             chiseq_array = np.array(chiseq_frame)
         else:
             chiseq_array = np.array(chiseq_frame[recomb])
+        print(chiseq_array)
         chiseq_value = scipy.stats.chi2_contingency(chiseq_array)
-        columns = chiseq_frame.columns
-        indexes = chiseq_frame.index
-        ratio_index = []
-        for i in indexes:
-            ratio_index.append(str(i)+'_ratio')
-        ratio_frame = chiseq_frame.copy()
-        ratio_frame.index=ratio_index
-        for j in columns:
-            ratio_frame[j] = ratio_frame[j]/ratio_frame[j].sum()
-        chiseq_frame = pd.concat([chiseq_frame, ratio_frame])
         chiseq_frame['chi2'] = chiseq_value[0]
         chiseq_frame['P'] = chiseq_value[1]
         chiseq_frame['df'] = chiseq_value[2]
@@ -125,7 +113,7 @@ class SataMethod():
         _sata_frame = self.dataframe
         classes = np.unique(np.array(self.dataframe[self.class_col]))
         km = KaplanMeierFitter()
-        fig = plt.figure()
+        #fig = plt.figure()
         lr_frame = pd.DataFrame(columns=['stat_value', 'lr_p'])
         for i in range(len(classes)):
             for j in range(i+1, len(classes)):
@@ -146,7 +134,7 @@ class SataMethod():
                              ] = [lr_p.test_statistic, lr_p.p_value]
             try:
                 km.fit(_T_1, event_observed=_E_1,
-                   label='Class'+str(classes[i]))
+                       label='Class'+str(classes[i]))
             except UnboundLocalError:
                 pass
             # km.plot()

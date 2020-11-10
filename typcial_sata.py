@@ -31,15 +31,18 @@ CLINICAL_ITEM = cfg.clinical_item
 MIN_ALIVE = cfg.min_alive
 VOTE_CLASS = 'Class_4'
 VOTE_LINE = 1
-WITH_TYPICAL = 'no'
-SATA_LIST = ['t_stage',
-             'n_stage',
-             'm_stage',
-             'patient_gender',
-             'patient_age',
-             'patient_weight',
-             'ajcc_stage',
-             ]
+CALC_NUM = 10
+SATA_LIST = [  # 'ICD_O3_pathology',
+    # 'ICD_O3_site',
+    # 'ajcc_stage',
+    'patient_age',
+    # 'patient_gender',
+    # 'patient_race',
+    'patient_weight'
+    #'to_last_known_alive'
+]
+DRAW_BOX = True
+WITH_TYPICAL_GENE = 'typical'
 # The above items should be check, modify if nessary.
 
 
@@ -50,14 +53,17 @@ nowtime = now.strftime('%Y-%m-%d-%H-%M-%S')
 if args.f:
     PATH = '/Users/freud/Documents/MANU/lstmsom_data/exp' + \
         str(args.f) + '/analysis_data_' + str(args.f) + '/'
-    if WITH_TYPICAL == 'no':
+    GENE_PATH = '/Users/freud/Documents/MANU/lstmsom_data/exp' + \
+        str(args.f) + '/other_files/'
+    OUTPUT_PATH = '/Users/freud/Documents/MANU/GENE_ANALYSIS/manuscript/figures/'
+    if WITH_TYPICAL_GENE == 'no':
         PATH_LOG = '/Users/freud/Documents/MANU/lstmsom_data/exp' + \
             str(args.f) + '/analysis_log_' + str(args.f) + '/' + \
             str(nowtime) + '/'
     else:
         PATH_LOG = '/Users/freud/Documents/MANU/lstmsom_data/exp' + \
             str(args.f) + '/analysis_log_' + str(args.f) + '/' + \
-            str(nowtime) + '-' + WITH_TYPICAL + '/'
+            str(nowtime) + '-' + WITH_TYPICAL_GENE + '/'
 
 
 def OutputFrame(dataframe, in_f, filename):
@@ -67,7 +73,7 @@ def OutputFrame(dataframe, in_f, filename):
 
 
 def LoadFrame(ori_file, mode='b'):
-    test_frame = pd.read_csv(ori_file, dtype={'patient_weight': str})
+    test_frame = pd.read_csv(ori_file)
     test_frame = test_frame.astype('str')
     if mode == 'b':
         test_frame['Reference_Allele'] = test_frame['Reference_Allele'] + \
@@ -88,7 +94,7 @@ def LoadFrame(ori_file, mode='b'):
     return classed_frame
 
 
-def CalSataItem(dataframe, outtxtfile, output_f, label='base'):
+def CalSataItem(dataframe, outtxtfile, WITH_TYPICAL, output_f, label='base'):
     sata_dict = cfg.clicfeat_dict
     for cal_item in SATA_LIST:
         calcframe = SATA_PRETREAT.DropEmptyData(dataframe, column=cal_item)
@@ -114,6 +120,32 @@ def CalSataItem(dataframe, outtxtfile, output_f, label='base'):
             except UnboundLocalError:
                 print(cal_item, ' is loss', file=outtxtfile)
         elif sata_dict[cal_item] == 'mid':
+            if DRAW_BOX == True:
+                mean_col = []
+                std_col = []
+                col_col = []
+                for cl in cfg.class_list_costom:
+                    kk = calcframe[cal_item][calcframe['class_result'] == cl]
+                    kk_count = kk.count()
+                    col_col.append(cl + ': Num=' + str(kk_count))
+                    kk = np.array(kk).astype(float).astype(int)
+                    kk = abs(kk)
+                    if kk.size == 0:
+                        std_col.append(0)
+                        mean_col.append(0)
+                    else:
+                        mean_col.append(np.mean(kk))
+                        std_col.append(np.std(kk))
+                print(std_col)
+                plt.errorbar(range(len(col_col)), mean_col, yerr=std_col, fmt='o')
+                plt.xticks(range(len(col_col)), col_col, rotation=90)
+                try:
+                    plt.savefig(OUTPUT_PATH + output_f.split('.')[0] + '/' + str(WITH_TYPICAL) + '-' + cal_item + '.tif')
+                except FileNotFoundError:
+                    os.mkdir(OUTPUT_PATH + output_f.split('.')[0] + '/')
+                    plt.savefig(OUTPUT_PATH + output_f.split('.')
+                                [0] + '/' + WITH_TYPICAL + '-' + cal_item + '.tif')
+                plt.close()
             sataasmid = SATA_METHODS.SataMethod(dataframe=calcframe)
             itemdescribe = sataasmid.Describe(descb_col=cal_item)
             itemttest = sataasmid.CalTTest(describeframe=itemdescribe)
@@ -158,18 +190,15 @@ def CalSataItem(dataframe, outtxtfile, output_f, label='base'):
                 print(cal_item, ' is loss.', file=outtxtfile)
     print("{:=^120}".format('finish'))
     print("{:=^120}".format('finish'), file=outtxtfile)
-    outtxtfile.close()
+    #outtxtfile.close()
 
 
 if __name__ == '__main__':
     if os.path.exists(PATH_LOG) == False:
         os.makedirs(PATH_LOG)
-    pre_files = os.listdir(PATH)
-    for i in pre_files:
-        if '.csv' not in i:
-            shutil.rmtree(PATH+i)
-    files = os.listdir(PATH)
+    files = os.listdir(GENE_PATH)
     for fi in files:
+        print(fi)
         output_path = PATH + fi.split('.')[0]
         if os.path.exists(output_path) == False:
             os.mkdir(output_path)
@@ -178,42 +207,13 @@ if __name__ == '__main__':
         print('{:=^120}'.format(fi), file=overwritefile)
         print('{:=^120}'.format(fi))
         classedframe = LoadFrame(PATH + '/' + fi)
-        if WITH_TYPICAL != 'no':
-            classedframe = classedframe[classedframe['Hugo_Symbol']
-                                        == WITH_TYPICAL]
-        CalSataItem(dataframe=classedframe,
-                    outtxtfile=overwritefile,
-                    output_f=fi,
-                    label='base')
-        """
-        if fi != 'whole.csv':
-            voteframe = SATA_PRETREAT.ClassiVoter(dataframe=classedframe,
-                                                  class_cal=VOTE_CLASS,
-                                                  line=VOTE_LINE)
-            voteframe.to_excel(
-                output_path + '/voted_class.xlsx', index=False)
-            try:
-                wholeframe = pd.concat(
-                    [wholeframe, voteframe], sort=True).reset_index(drop=True)
-            except NameError:
-                wholeframe = voteframe
-            overwritefile = open(PATH_LOG + fi.split('.')
-                                 [0] + '_vote_ow.txt', 'a+')
-            print('{:=^120}'.format(fi), file=overwritefile)
-            print('{:=^120}'.format(fi))
-            print('>>>>>>>> VOTE WAY: ' + str(VOTE_CLASS) +
-                  '>=' + str(VOTE_LINE), file=overwritefile)
-            CalSataItem(dataframe=voteframe,
+        genelist = pd.read_csv(GENE_PATH + fi, index_col=0)
+        for i in range(CALC_NUM):
+            genename = genelist.index[i]
+            drawframe = classedframe[classedframe['Hugo_Symbol']
+                                        == genename]
+            CalSataItem(dataframe=drawframe,
                         outtxtfile=overwritefile,
                         output_f=fi,
-                        label='vote')
-    if WITH_TYPICAL == 'no':
-        overwritefile = open(PATH_LOG + 'whole_vote_ow.txt', 'a+')
-        print('{:=^120}'.format('whole'), file=overwritefile)
-        print('{:=^120}'.format('whole'))
-        wholeframe.to_excel(PATH_LOG + 'whole_vote.xlsx', index=False)
-        CalSataItem(dataframe=wholeframe,
-                    outtxtfile=overwritefile,
-                    output_f='whole.csv',
-                    label='vote')
-        """
+                        label='base',
+                        WITH_TYPICAL=genename)

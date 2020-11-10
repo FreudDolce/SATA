@@ -7,7 +7,10 @@
 import pandas as pd
 import numpy as np
 import os
+import cfg
 #from sata_main import PARA
+
+CFG = cfg.CFG()
 
 
 def GetSurvTime(dataframe):
@@ -35,81 +38,44 @@ def GetSurvTime(dataframe):
     return dataframe
 
 
-def Classifier(dataframe, accordcol, thresh=[0]):
+def Classifier(dataframe):
     """
     return a dataframe with a column named "class_result"
     Should enter accordcol (the column according to )
     and thres (the list of threshes, upper line should be contained)
     """
-    threshold = sorted(thresh)[:: -1]
-    dataframe['class_result'] = -2
-    for i in range(len(threshold)):
-        dataframe['class_result'][dataframe[accordcol]
-                                  <= threshold[i]] = len(threshold) - i
-    dataframe['class_result'][dataframe['class_result'] == -2] = 0
+    dataframe.rename(columns={'class': 'class_result'}, inplace=True)
     print('===================================================================')
     print('Hint: add a new column in dataframe, named "class_result"')
     print('===================================================================')
     return dataframe
 
 
-def ClassiVoter(dataframe, freq_dict={}, method='quadrant', bias=[-0.2, 0.2],
-                vote_line=1.2, direct=np.array([[0, 1], [1, 0], [0, -1], [-1, 0]])):
-    print('******-> This frame should contain "class_result" column <-********')
-    dataframe['vote_class'] = None
-    id_list = np.unique(np.array(dataframe['Tumor_Sample_Barcode']))
-    calc_dict = {}
-    for patient_id in id_list:
-        vote_freq = dataframe['class_result'][dataframe['Tumor_Sample_Barcode'] ==
-                                              patient_id].value_counts()
-        vote_freq = vote_freq/vote_freq.sum()
-        try:
-            calcframe.loc[patient_id] = 0
-        except UnboundLocalError:
-            calcframe = pd.DataFrame(columns=list(freq_dict))
-            calcframe.loc[patient_id] = 0
-        for i in vote_freq.index:
-            calc_dict[i] = vote_freq[i]/freq_dict[i]
-            calcframe[i][patient_id] = calc_dict[i]
-        if method == 'fold':
-            max_class = max(calc_dict, key=calc_dict.get)
-            if calc_dict[max_class] >= vote_line:
-                vote_class = max_class
-            else:
-                vote_class = 0
-        elif method == 'quadrant':
-            judgemati = [0, 0]
-            for i in range(len(direct)):
-                try:
-                    judgemati += direct[i]*calc_dict[i + 1]
-                except ValueError:
-                    print(direct)
-                    print(calc_dict)
-                except KeyError:
-                    judgemati += [0, 0]
-            if (judgemati[0] >= vote_line + bias[0]) and (judgemati[1] > vote_line + bias[1]):
-                vote_class = '1'
-            elif (judgemati[0] > vote_line + bias[0]) and (judgemati[1] <= -1 * vote_line + bias[1]):
-                vote_class = '2'
-            elif (judgemati[0] <= -1 * vote_line + bias[0]) and (judgemati[1] < -1 * vote_line + bias[1]):
-                vote_class = '3'
-            elif (judgemati[0] < -1 * vote_line + bias[0]) and (judgemati[1] >= vote_line + bias[1]):
-                vote_class = '4'
-            else:
-                vote_class = '0'
-        dataframe['vote_class'][dataframe['Tumor_Sample_Barcode'] ==
-                                patient_id] = vote_class
-        clinical_series = dataframe[dataframe['Tumor_Sample_Barcode'] == patient_id]
-        try:
-            vote_frame = vote_frame.append(clinical_series.iloc[[0]])
-        except UnboundLocalError:
-            vote_frame = clinical_series.iloc[[0]]
-    calcframe.fillna(0)
+def ClassiVoter(dataframe, class_cal=122, line=2):
     print('******-> Important!!! retun a new dataframe dif from ori <-********')
+    dataframe = dataframe[CFG.clinical_item]
+    patient_list = list(set(np.array(dataframe['Tumor_Sample_Barcode'])))
+    for patient in patient_list:
+        try:
+            judge_count = dataframe[dataframe['Tumor_Sample_Barcode']
+                                    == patient]['class_result'].value_counts()[class_cal]
+        except KeyError:
+            judge_count = 0
+        if judge_count >= line:
+            dataframe['class_result'][dataframe['Tumor_Sample_Barcode']
+                                      == patient] = str(class_cal) + '>=' + str(line)
+        else:
+            dataframe['class_result'][dataframe['Tumor_Sample_Barcode']
+                                      == patient] = 'negtive'
+    cli_frame = dataframe.drop_duplicates(subset='Tumor_Sample_Barcode')
+    cli_frame['to_last_known_alive'] = pd.to_numeric(
+        cli_frame['to_last_known_alive'], errors='coerce')
+    cli_frame.drop(
+        cli_frame[cli_frame['to_last_known_alive'] < CFG.min_alive].index, inplace=True)
     print('===================================================================')
     print('Hint: add a new column in dataframe, named "vote_class"')
     print('===================================================================')
-    return (vote_frame, calcframe)
+    return cli_frame
 
 
 def DropEmptyData(dataframe, column, empty_index=['data_loss', 'data_empty']):
@@ -118,15 +84,14 @@ def DropEmptyData(dataframe, column, empty_index=['data_loss', 'data_empty']):
     return dataframe
 
 
-def NeuPreteate(dataframe):
-    neumeric_list = ['pred_1', 'pred_2', 'pred_3', 'pred_4',
-                     'pred_5', 'pred_6', 'pred_7', 'pred_8']
+def NeuPreteate(dataframe, neumeric_list = ['pred_1', 'pred_2', 'pred_3', 'pred_4',
+                     'pred_5', 'pred_6', 'pred_7', 'pred_8', 'ICD_O3_pathology']):
     for item in neumeric_list:
         dataframe[item] = pd.to_numeric(dataframe[item], errors='coerce')
     return dataframe
 
 
-def ChiSquarePretreat(dataframe, column, class_column='class_result'):
+def ChiSquarePretreat(dataframe, column, class_column):
     class_list = np.unique(np.array(dataframe[class_column]))
     for i in class_list:
         part_frame = dataframe[dataframe[class_column] == i]
@@ -145,12 +110,11 @@ def ChiSquarePretreat(dataframe, column, class_column='class_result'):
 
 
 if __name__ == '__main__':
-    pass
     C_22_ori = pd.read_csv(
-        '~/Documents/MANU/lstmsom_data/exp20200227/cluster_result_20200227/flag_C02.csv')
+        '/Users/freud/Documents/MANU/lstmsom_data/exp20200616/analysis_data_20200616/adrenal.csv')
     C_22_cla = Classifier(C_22_ori)
-    C_22_cla = ClassiVoter(C_22_cla)
-    print(C_22_cla)
+    C_22_vo = ClassiVoter(C_22_cla)
+    print(C_22_vo)
     """
     files = os.listdir(
         '/Users/freud/Documents/MANU/lstmsom_data/cluster_result_20200215/')

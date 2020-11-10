@@ -26,12 +26,10 @@ EXT = 10  # cfg.ext
 CAMP = matplotlib.cm.hot
 WHOLE_SEQUENCE = Fasta(
     '/Users/freud/Documents/MANU/lstmsom_data/clinical_data/hg38.fa')
-CMAP = 'Reds'
-NORM = matplotlib.colors.Normalize(vmin=0, vmax=1)
-PATH = '/Users/freud/Documents/MANU/lstmsom_data/exp' + \
-    str(args.f) + '/'
+PATH = '/Users/freud/Documents/MANU/lstmsom_data/exp20200617/analysis_data_20200617/'
 CALC_NUM = 3
 CAL_NUM_CSV = 20
+FIG_PATH = '/Users/freud/Documents/MANU/GENE_ANALYSIS_1/manuscript/figures/Figure/f1/'
 
 
 def VisiableSeq(test_frame):
@@ -231,50 +229,24 @@ def MBScatter(countframe, rateframe):
 
 
 if __name__ == '__main__':
-    fl = os.listdir(PATH + 'analysis_data_20200617/')
-    fl.remove('whole.csv')
-    #countframe = np.array([1, 5, 10, 50, 100, 500])
-    #countframe = pd.DataFrame(countframe)
-    # print(countframe)
-    #rateframe = np.array([0.005, 0.01, 0.05, 0.1, 0.5])
-    #rateframe = pd.DataFrame(rateframe)
-    # print(rateframe)
-    for f in fl:
-        if '.csv' in f:
-            print(f.split('.')[0])
-            countf = PATH + 'analysis_data_20200617/' + f
-            ratef = PATH + 'analysis_patient_20200617/' + f
-            wholeframe = pd.read_csv(countf)
-            ratedf = pd.read_csv(ratef)
-            # for p in cfg.clicfeat_dict['ICD_O3_pathology']:
-            #    wholeframe['ICD_O3_pathology'].loc[wholeframe['ICD_O3_pathology'].isin(cfg.clicfeat_dict['ICD_O3_pathology'][p])] = p
-            countframe, indexes = CountMBforPatients(
-                wholeframe, calcitem='ICD_O3_site')
-            rateframe = RateMBforPatients(
-                ratedf, ind=indexes, calcitem='ICD_O3_site')
-            plt = MBScatter(countframe, rateframe)
-            plt.tight_layout()
-            plt.savefig(PATH + 'analysis_data_20200617/' +
-                        f.split('.')[0] + '/site_scatter.tif')
-    """
     file_list = os.listdir(PATH)
     file_list.remove('whole.csv')
-    print(file_list)
     for f in file_list:
         print(f)
         if '.csv' in f:
             print('--------->', f, ' start...')
             visfile = PATH + f
             print('folder: ', visfile)
-            visframe = VisiableSeq(visfile)
-            partframe = VisiableSeq(visfile)
+            df = pd.read_csv(visfile)
+            visframe = VisiableSeq(df)
+            partframe = VisiableSeq(visframe)
             try:
                 totalvisframe = pd.concat([totalvisframe, partframe], ignore_index=True)
             except NameError:
                 totalvisframe = partframe
             drawframe, plt= MapVisiable(frame=visframe)
             plt.tight_layout()
-            plt.savefig(PATH + f.split('.')[0] + '/genepile.tif')
+            plt.savefig(FIG_PATH + f.split('.')[0] + '_genepile.tif')
             print('--------->', f, 'finished')
     print(pd.crosstab(totalvisframe['class_result'], totalvisframe['Reference_Allele']))
     #totalvisframe['front_seq'] = totalvisframe['front_seq'] + \
@@ -287,5 +259,4 @@ if __name__ == '__main__':
     #    outframe.to_csv(PATH + 'whole/' + c + '_base_count.csv')
     drawframe, plt = MapVisiable(frame=totalvisframe)
     plt.tight_layout()
-    plt.savefig(PATH + 'whole/genepile.tif')
-    """
+    plt.savefig(FIG_PATH+ 'whole_genepile.tif')
