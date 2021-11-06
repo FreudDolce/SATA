@@ -8,7 +8,6 @@ import numpy as np
 import pandas as pd
 import os
 import GETPERDATA
-from DATALOADER import GetFileData
 import json
 import argparse
 from datetime import datetime

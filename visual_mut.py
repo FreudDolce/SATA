@@ -1,4 +1,4 @@
-# =========================================
+
 # Used for visualise the mutation sequence
 # Written by Ji Hongchen
 # 20200419
@@ -179,6 +179,7 @@ def CountMBforPatients(dataframe, calcitem='ICD_O3_site'):
     class_list = ['Class_1', 'Class_2', 'Class_3', 'Class_4', 'Class_5',
                   'Class_6', 'Class_7', 'Class_8', 'Class_9', 'Class_10']
     claclist = list(set(dataframe[calcitem]))
+    print(claclist)
     countframe = pd.DataFrame(columns=class_list)
     for i in claclist:
         if dataframe[dataframe[calcitem] == i][calcitem].count() > 1000:
@@ -201,9 +202,9 @@ def RateMBforPatients(dataframe, ind, calcitem='ICD_O3_site'):
                   'Class_6', 'Class_7', 'Class_8', 'Class_9', 'Class_10']
     rate_list = ['Rate' + class_list[i] for i in range(len(class_list))]
     rateframe = pd.DataFrame(columns=rate_list, index=ind)
-    for k in cfg.clicfeat_dict[calcitem]:
-        dataframe[calcitem][dataframe[calcitem].isin(
-            cfg.clicfeat_dict[calcitem][k])] = k
+    #for k in cfg.clicfeat_dict[calcitem]:
+    #    dataframe[calcitem][dataframe[calcitem].isin(
+    #        cfg.clicfeat_dict[calcitem][k])] = k
     for cr in rateframe.index:
         crframe = dataframe[dataframe[calcitem] == cr]
         for i in rate_list:
@@ -214,7 +215,8 @@ def RateMBforPatients(dataframe, ind, calcitem='ICD_O3_site'):
 def MBScatter(countframe, rateframe):
     countframe = countframe.astype('int')
     countframe = countframe.apply(np.log2)
-    fig = plt.figure(figsize=(4.8, 5), dpi=300)
+    fig = plt.figure(figsize=(4.8, 10), dpi=300)
+    print(rateframe)
     for i in range(len(countframe.columns)):
         for j in range(len(countframe.index)):
             c_1 = 0.7 + 0.3 * np.log10(rateframe.iloc[j, i])
@@ -225,14 +227,15 @@ def MBScatter(countframe, rateframe):
                 c_3 = 1
             plt.scatter([i], [j],
                         s=11.5 * (countframe.iloc[j, i] + 1),
-                        c=(c_1, 0, c_3))
+                        c=np.array([c_1, 0, c_3]).reshape(1, -1))
     plt.yticks(range(len(countframe.index)), countframe.index, fontsize=13)
     return plt
 
 
 if __name__ == '__main__':
-    fl = os.listdir(PATH + 'analysis_data_20200617/')
-    fl.remove('whole.csv')
+    fl = ['whole.csv']
+    #fl = os.listdir(PATH + 'analysis_data_20200617/')
+    #fl.remove('whole.csv')
     #countframe = np.array([1, 5, 10, 50, 100, 500])
     #countframe = pd.DataFrame(countframe)
     # print(countframe)
@@ -250,12 +253,16 @@ if __name__ == '__main__':
             #    wholeframe['ICD_O3_pathology'].loc[wholeframe['ICD_O3_pathology'].isin(cfg.clicfeat_dict['ICD_O3_pathology'][p])] = p
             countframe, indexes = CountMBforPatients(
                 wholeframe, calcitem='ICD_O3_site')
+            countframe = countframe.sort_index(ascending=True)
+            print(countframe)
             rateframe = RateMBforPatients(
                 ratedf, ind=indexes, calcitem='ICD_O3_site')
+            rateframe = rateframe.sort_index(ascending=True)
+            print(rateframe)
             plt = MBScatter(countframe, rateframe)
             plt.tight_layout()
             plt.savefig(PATH + 'analysis_data_20200617/' +
-                        f.split('.')[0] + '/site_scatter.tif')
+                        f.split('.')[0] + '/site_scatter_1.tif')
     """
     file_list = os.listdir(PATH)
     file_list.remove('whole.csv')

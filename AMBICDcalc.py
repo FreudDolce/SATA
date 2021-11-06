@@ -11,7 +11,7 @@ import cfg
 CFG = cfg.CFG()
 CMAP = plt.get_cmap('Reds')
 READAPTH = '/Users/freud/Documents/MANU/lstmsom_data/exp20200617/analysis_data_20200617/'
-SAVEPATH = '/Users/freud/Documents/MANU/GENE_ANALYSIS_1/manuscript/figures/Figure/f2/'
+SAVEPATH = '/Users/freud/Documents/MANU/lstmsom_data/exp20200617/analysis_data_20200617/whole/'
 TYPICAL_GENE = 'TP53'
 CURVE = False
 
@@ -33,7 +33,7 @@ def DrawPileMap(dataframe, figname, rate='yes'):
     dataframe.sort_index(inplace=True)
     yLabel = list(dataframe.index)
     drawframe = dataframe[xLabel]
-    fig = plt.figure(figsize=(3.5, 6.5), dpi=300)
+    fig = plt.figure(figsize=(10, 4.5), dpi=300)
     ax = fig.add_subplot(111)
     ax.set_ylim(0, 1)
     for i in drawframe.columns:
@@ -56,7 +56,7 @@ def DrawPileMap(dataframe, figname, rate='yes'):
                 format='tif', bbox_inches='tight')
 
 if __name__ == '__main__':
-    calcitem = 'ICD_O3_pathology'
+    calcitem = 'ICD_O3_site'
     fl = ['whole.csv']#os.listdir(READAPTH)
     least_sata = 1000
     for f in fl:
@@ -68,8 +68,8 @@ if __name__ == '__main__':
             df['class'][df['class'] == 'Class_10'] = 'Class_X'
             df.drop(df[df[calcitem].isin(
                 ['data_loss', 'data_empty'])].index, inplace=True)
-            for item in CFG.clicfeat_dict[calcitem]:
-                df[calcitem][df[calcitem].isin(CFG.clicfeat_dict[calcitem][item])] = item
+            #for item in CFG.clicfeat_dict[calcitem]:
+            #    df[calcitem][df[calcitem].isin(CFG.clicfeat_dict[calcitem][item])] = item
             df.drop(
                 df[df['class'].isin(['data_loss', 'data_empty'])].index, inplace=True)
             crossframe = pd.crosstab(df['class'], df[calcitem])
